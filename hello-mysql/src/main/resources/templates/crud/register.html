@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<!--  이거 버젼 차이 있음 -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport가 무엇인지 알아보기 -->
+<title>일별 통계</title>
+<link rel="stylesheet"
+	href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+<link rel="stylesheet" href="../css/gjy_common.css">
+<link rel="stylesheet" href="../css/gjy_div.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<!-- datepicker 한국어로 -->
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/i18n/datepicker-ko.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<!-- numWithCommas 스크립트 파일 -->
+<script src="../script/gjy_common.js"></script>
+<script th:inline="javascript">
+function assignStatusMsg(param){
+	switch (param){
+	case "00":
+		return statusList[0];
+		break;
+	case "01":
+		return statusList[1];
+		break;
+	case "02":
+		return statusList[2];
+		break;
+	}
+}
+
+/* function showRegisterPopUp(){
+	
+	window.name = "registerPage";
+	let url = "register/company";
+	let name = "pop-up";
+	let option = "width = 500, height = 500, top = 100, left = 200, location = no";
+	
+	window.open(url, name, option);
+} */
+
+function initializeTable(){
+	$('#companyId').find('option:first').prop('selected', true);
+	$('input[type=text]').val(null);
+	$('#siteStatus').find('option:first').prop('selected', true);
+	$('input:radio[name=siteCalculate]:radio[value="Y"]').prop("checked",true); 
+}
+
+$(document).ready(function () {
+	
+	loadCompanyList();
+	
+	$("#inputTable > tbody > tr").eq(6).hide();
+	
+	$('#registerCompanyBtn').on('click', function(){
+		$('[name=companynm]').val(null);
+		$('[name=feerate]').val(null);
+		$('#valid_companynm').text('');
+	})
+	
+	$('input[type=radio][name=siteType]').change(function() {
+		
+	    if (this.value == '01') {
+	    	initializeTable();
+	    	$("#inputTable > tbody > tr").eq(6).show();
+	    	$('input[name=siteGearingUrl]').prop("disabled", false);
+	    }
+	    else {
+	    	initializeTable();
+	    	$("#inputTable > tbody > tr").eq(6).hide();
+	    	$('input[name=siteGearingUrl]').prop("disabled", true);
+	    }
+	});
+
+
+	$('#reg_confirm_btn').on('click', function(){
+		
+		if( !$('[name = siteName]').val().replaceAll(' ', '') ){
+			$('.modal_wrapper').hide();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+			$('[name = siteName]').focus();
+			$('#valid_siteName').text("사이트 명을 입력하세요.");
+		} else if( regUrl.test($('[name = siteUrl]').val()) == false ){
+			$('.modal_wrapper').hide();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+			$('[name = siteUrl]').focus();
+			$('#valid_siteUrl').text("잘못된 URL 형식입니다.");
+		} else if( !$('[name = siteManagerName]').val().replaceAll(' ', '') ){
+			$('.modal_wrapper').hide();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+			$('[name = siteManagerName]').focus();
+			$('#valid_siteManagerName').text("10자 이하로 입력하세요.");
+		} else if(regPhone.test($('[name = siteManagerNumber]').val()) == false){
+			console.log("3");
+			$('.modal_wrapper').hide();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+			$('[name = siteManagerNumber]').focus();
+			$('#valid_siteManagerNumber').text("잘못된 연락처 형식입니다.");
+		} else if( !$('[name = siteManagerEmail]').val().replaceAll(' ', '') ){
+			console.log("2");
+			$('.modal_wrapper').hide();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+			$('[name = siteManagerEmail]').focus();
+			$('#valid_siteManagerEmail').text("필수 항목을 입력하세요.");
+		} else if( !regEmail.test($('[name = siteManagerEmail]').val()) ){
+			console.log("1");
+			$('.modal_wrapper').hide();
+			$('[name = siteManagerEmail]').focus();
+			$('#valid_siteManagerEmail').text("잘못된 이메일 형식입니다.");
+		} else {
+			let params = $('[name=registerForm]').serialize();
+			$.ajax({
+				method: "post",
+				url: "/site/register/",
+				data: params,
+				success: function(data){
+					console.log(data);
+					if (data.result === "fail"){
+						$('.modal_wrapper').hide();
+						$('#'+data.errParam).text(data.errMsg);
+						showConfirmModal('necessary_info', data.errMsg);
+					} else {
+						$('.modal_wrapper').hide();
+						showConfirmModal('confirm_registration','등록되었습니다.');
+					}
+				},
+				complete: function(){
+					console.log("완료");
+				}
+			})
+		}
+	})
+	
+$("#register_company_btn").on('click', function(){
+		
+		let params = $("#registerCompanyForm").serialize();
+		
+		if( $('input[name=companynm]').val().length > 30 
+				|| $('input[name=companynm]').val() == null 
+				|| $('input[name=companynm]').val() == "" ){
+			$('#valid_companynm').text("30자 이하로 입력하세요.");
+			$('input[name=companynm]').focus();
+		} else if($('input[name=feerate]').val() > 100 
+				|| $('input[name=feerate]').val() == null 
+				|| $('input[name=feerate]').val() == "" ){
+			$('#valid_feerate').text("0 이상 100 이하로 입력하세요.");
+			$('input[name=feerate]').focus();
+		} else {
+			$.ajax({
+				method: "post",
+				url: "/site/register/company",
+				data: params,
+				success: function(data){
+					console.log(data);
+					if(data.result === "fail"){
+						$('#'+data.errParam).text(data.errMsg);
+					} else {
+						$('.modal_wrapper').hide();
+					}
+				},
+				complete: function(){
+					loadCompanyList();
+				}
+			})
+			
+		}
+	});
+});
+</script>
+</head>
+<body>
+<form name="registerForm" action="/site/register" method="POST">
+<div class="pageTop">
+<h3>제휴사 사이트 관리</h3>
+</div>
+<div class="mainDiv"}>
+<h3>사이트 등록</h3>
+<div>
+<table id="inputTable" cellspacing="0" width="100%">
+	<tbody>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+			<label for="siteType" style="color: black">사이트 유형&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="radio" id="siteType" name="siteType" value="00" checked="checked">마케팅 제휴사
+				<input type="radio" id="siteType" name="siteType" value="01">서비스 제휴사
+			</td>
+		</tr>
+	</tbody>
+</table>
+</div>
+<br>
+<br>
+<table id="inputTable" cellspacing="0" width="100%">
+	<tbody id="registerBody">
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="companyId" style="color: black">제휴사&nbsp&nbsp</label>
+			</td>
+			<td>
+				<select id="companyId" name="companyId" style="width: 300px">
+				<!-- <option th:text="${list.comp0anynm}" th:each="list:${companyList}" th:value="${list.companyno}"></option> -->
+				</select>
+				<button type="button" class="type3Btn" id="registerCompanyBtn" onclick="$('#company_registration').show();">신규 제휴사 등록</button>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteName" style="color: black">사이트명&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteName" placeholder="30자 이하" maxlength="30" style="width: 300px"/>
+				<span id="valid_siteName" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteStatus" style="color: black">사이트 상태&nbsp&nbsp</label>
+			</td>
+			<td>
+				<select id="siteStatus" name="siteStatus" style="width: 300px">
+					<option value="00">정상</option>
+					<option value="01">중지</option>
+					<option value="02">준비중</option>
+				</select>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<span style="color: black">정산 여부&nbsp&nbsp</span>
+			</td>
+			<td>
+				<input type="radio" id="siteCalculate" name="siteCalculate" value="Y" checked="checked">Y
+				<input type="radio" id="siteCalculate" name="siteCalculate" value="N">N
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteUrl" style="color: black">사이트 URL&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteUrl" placeholder="http:// 또는 https://를 입력하세요" style="width: 300px"/>
+				<span id="valid_siteUrl" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteGearingUrl" style="color: black">사이트 연동 URL&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteGearingUrl" placeholder="http:// 또는 https://를 입력하세요" style="width: 300px"/>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteManagerName" style="color: black">사이트 담당자&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteManagerName" placeholder="10자 이하" maxlength="20" style="width: 300px"/>
+				<span id="valid_siteManagerName" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteManagerNumber" style="color: black">담당자 연락처&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteManagerNumber" placeholder="000-0000-0000" style="width: 300px"/>
+				<span id="valid_siteManagerNumber" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<label for="siteManagerEmail" style="color: black">담당자 이메일&nbsp&nbsp</label>
+			</td>
+			<td>
+				<input type="text" name="siteManagerEmail" placeholder="example@address.com" style="width: 300px"/>
+				<span id="valid_siteManagerEmail" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+	</tbody>
+</table>
+</div>
+<div class="btnDiv" style="text-align: center">
+<input type="button" id="registerBtn" class="type1Btn" value="등록" onclick="showConfirmModal('register', '등록하시겠습니까?');"/>
+<input type="button" id="cancelBtn" class="type2Btn" value="취소" onclick="showConfirmModal('cancel','취소하시겠습니까?');"/>
+</div>
+</form>
+<!-- 취소 -->
+<div class="modal_wrapper" id="cancel">
+	<div class="modal_confirm_content">
+		<div class="modal_msg">
+		</div>
+		<div class="modal_btn">
+			<button type="button" class="type2Btn" id="close_btn" onclick="$('.modal_wrapper').hide();">취소</button>
+			<button type="button" class="type1Btn" id="canc_confirm_btn" onclick="location = './list';">확인</button>
+		</div>
+	</div>
+</div>
+<!-- 등록 -->
+<div class="modal_wrapper" id="register">
+	<div class="modal_confirm_content">
+		<div class="modal_msg">
+		</div>
+		<div class="modal_btn">
+			<button type="button" class="type2Btn" id="close_btn" onclick="$('.modal_wrapper').hide();">취소</button>
+			<button type="button" class="type1Btn" id="reg_confirm_btn">확인</button>
+		</div>
+	</div>
+</div>
+<!-- 등록 확인 -->
+<div class="modal_wrapper" id="confirm_registration">
+	<div class="modal_confirm_content">
+		<div class="modal_msg">
+		</div>
+		<div class="modal_btn">
+			<button type="button" class="type1Btn" onclick="location = './list';">확인</button>
+		</div>
+	</div>
+</div>
+<!-- 필수 입력 확인 -->
+<div class="modal_wrapper" id="necessary_info">
+	<div class="modal_confirm_content">
+		<div class="modal_msg">
+		</div>
+		<div class="modal_btn">
+			<button type="button" class="type1Btn" onclick="$('.modal_wrapper').hide();">확인</button>
+		</div>
+	</div>
+</div>
+<!-- 신규 제휴사 등록 -->
+<div class="modal_wrapper" id="company_registration">
+	<div class="modal_register_content">
+		<div class="modal_input">
+			<h3>신규 제휴사 등록</h3>
+			<form id="registerCompanyForm" method="POST">
+				<p>
+				<input type="text" name="companynm" maxlength="30" placeholder="제휴사 명을 입력해 주세요."/>
+				<span id="valid_companynm" th:style="${'color: red; font-size:11px;'}" th:text="${valid_companynm}"></span>
+				</p>
+				<p>
+				<input type="text" name="feerate" placeholder="수수료율(단위: %)"/>
+				<span id="valid_feerate" th:style="${'color: red; font-size:11px;'}" th:text="${valid_feerate}"></span>
+				</p>
+				<br>
+				<br>
+			</form>
+		</div>
+		<div class="modal_btn">
+			<input type="button" class="type1Btn" id="register_company_btn" value="등록">
+			<input type="button" class="type2Btn" onclick="$('.modal_wrapper').hide();" value="취소"></button>
+		</div>
+	</div>
+</div>
+</body>
+</html>

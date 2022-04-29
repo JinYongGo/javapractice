@@ -1,0 +1,26 @@
+<meta charset="UTF-8">
+<script th:inline="javascript">
+/*<![CDATA[*/
+var searchList = /*[[${searchList}]]*/;
+/*]]>*/
+console.log(searchList);
+console.log(searchList[1].orderDate);
+</script>
+<table border="1" cellspacing="0" width="100%" id="resultTable">
+	<thead align="center">
+		<tr>
+			<td>날짜</td>
+			<td>상품금액</td>
+			<td>할인금액</td>
+			<td>결제금액</td>
+		</tr>
+	</thead>
+	<tbody>
+		<tr th:each="list:${searchList}">
+			<td th:text="${list.orderDate}"></td>
+			<td th:text="${list.price}"></td>
+			<td th:text="${list.discount}"></td>
+			<td th:text="${list.totalPrice}"></td>
+		</tr>
+	</tbody>
+</table>

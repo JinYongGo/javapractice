@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="hello.mysql.repository.EmployeeRepository">
+    <select id="selectAll" resultType="hello.mysql.domain.OrderGoods">
+        SELECT * FROM aton_order_goods <!-- 프로젝트 할 때는 직접 명시(* 사용x) -->
+    </select>
+    <select id="selectByPeriod" resultType="hello.mysql.domain.OrderGoodsJoinOrder">
+    	/*employ.selectByPeriod*/
+    	SELECT 
+    		date_format(aton_order.orddt, '%Y-%m-%d') AS orderDate, 
+    		SUM(aton_order_goods.price * aton_order_goods.ea) AS price, 
+    		SUM(aton_order_goods.discount * aton_order_goods.ea+aton_order_goods.coupon) AS discount, 
+    		SUM(aton_order_goods.price * aton_order_goods.ea-aton_order_goods.discount*aton_order_goods.ea-aton_order_goods.coupon) AS payment
+    	FROM aton_order_goods 
+    	INNER JOIN aton_order 
+    	ON aton_order.ordno=aton_order_goods.ordno
+    	WHERE aton_order.orddt <![CDATA[ >= ]]>#{startDate}
+    	AND aton_order.orddt <![CDATA[ <= ]]>CONCAT(#{endDate}, " 23:59:59")
+    	AND aton_order_goods.istep <![CDATA[ <= ]]>4
+    	<if test="companyno != null and companyno != ''"> 
+    	AND aton_order_goods.companyno=#{companyno}
+    	</if>
+    	GROUP BY orderDate
+    	ORDER BY orderDate ASC
+    </select>
+    <select id="selectAllCompany" resultType="hello.mysql.domain.Company">
+    	SELECT * FROM aton_company
+    </select>
+    <select id="selectByMonth" resultType="hello.mysql.domain.JoinAll">
+    	/*employ.selectByMonth*/
+    	SELECT
+    		aton_company.companynm AS companynm,
+    		SUM(aton_order_goods.price*aton_order_goods.ea) AS price,
+    		SUM(aton_order_goods.discount*aton_order_goods.ea + aton_order_goods.coupon) AS discount,
+    		SUM(price-discount) AS total
+    	FROM aton_order_goods
+    	INNER JOIN aton_order 
+    	ON aton_order.ordno=aton_order_goods.ordno
+    	INNER JOIN aton_company
+    	ON aton_company.companyno=aton_order_goods.companyno
+    	WHERE aton_order.orddt <![CDATA[ >= ]]> CONCAT(#{searchYear}, "-", #{searchMonth}, "-", "01")
+		AND  aton_order.orddt <![CDATA[ <= ]]> CONCAT(LAST_DAY(CONCAT(#{searchYear}, '-', #{searchMonth}, '-', '01')), ' ', '23:59:59')
+		AND aton_order_goods.istep <![CDATA[ <= ]]> 4
+		GROUP BY companynm
+		ORDER BY companynm DESC
+    </select>
+    <select id="selectByMonthAndComp" resultType="hello.mysql.domain.JoinAllWithCompany">
+    	/*employ.selectByMonthAndComp*/
+    	SELECT 
+    		SUM(aton_order_goods.price*aton_order_goods.ea) AS price,
+    		SUM(aton_order_goods.discount*aton_order_goods.ea + aton_order_goods.coupon) AS discount,
+    		SUM(aton_order_goods.price*aton_order_goods.ea-aton_order_goods.discount*aton_order_goods.ea - aton_order_goods.coupon) AS payment,
+    		SUM(price-discount)*aton_company.feerate/100
+    	FROM aton_order_goods
+    	INNER JOIN aton_order 
+    	ON aton_order.ordno=aton_order_goods.ordno
+    	INNER JOIN aton_company
+    	ON aton_company.companyno=aton_order_goods.companyno
+    	WHERE aton_order.orddt <![CDATA[ >= ]]>CONCAT(#{searchYear}, "-", #{searchMonth}, "-", "01")
+		AND  aton_order.orddt <![CDATA[ <= ]]>CONCAT(LAST_DAY(CONCAT(#{searchYear}, '-', #{searchMonth}, '-', '01')), ' ', '23:59:59')
+		AND aton_order_goods.istep <![CDATA[ <= ]]>4
+		AND aton_company.companynm=#{companynm}
+    </select>
+    <select id="selectByGoods" resultType="hello.mysql.domain.JoinByGoods">
+    /*employ.selectByGoods*/
+    	SELECT 
+    		T1.goodsno AS goodsno,
+    		SUM(T1.price*T1.ea) AS price,
+    		SUM(T1.discount*T1.ea + T1.coupon) AS discount,
+    		SUM(T1.price*T1.ea-T1.discount*T1.ea-T1.coupon) AS payment
+    	FROM aton_order_goods T1
+    	INNER JOIN aton_order T2
+    	ON T1.ordno=T2.ordno
+    	INNER JOIN aton_company T3
+    	ON T1.companyno=T3.companyno
+    	WHERE T2.orddt <![CDATA[ >= ]]> CONCAT(#{searchYear}, "-", #{searchMonth}, "-", "01")
+		AND T2.orddt <![CDATA[ <= ]]> CONCAT(LAST_DAY(CONCAT(#{searchYear}, '-', #{searchMonth}, '-', '01')), ' ', '23:59:59')
+		AND T1.istep <![CDATA[ <= ]]> 4
+		AND T3.companynm=#{companynm}
+		GROUP BY T1.goodsno
+		ORDER BY T1.goodsno ASC
+    </select>
+    <select id="selectToday" resultType="string">
+    	SELECT date_format(now(), '%Y-%m-%d') as date;
+    </select>
+    <insert id="addCompany">
+    	INSERT INTO aton_company(companynm, feerate)
+    	VALUES (#{companynm}, #{feerate})
+    </insert>
+    <select id="searchByCompany" resultType="hello.mysql.domain.Company">
+    	SELECT *
+    	FROM aton_company
+    	WHERE aton_company.companynm = #{companynm}
+    </select>
+</mapper>

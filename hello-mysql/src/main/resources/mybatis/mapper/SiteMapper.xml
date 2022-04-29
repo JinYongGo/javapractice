@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="hello.mysql.repository.SiteRepository">
+    <select id="selectAllSite" resultType="hello.mysql.domain.SiteWithCompanyName">
+        SELECT
+        	acs.siteId,
+        	acs.siteName,
+        	ac.companynm,
+        	acs.siteStatus,
+        	acs.siteCalculate,
+        	acs.siteProtocol,
+        	acs.siteUrlDetail,
+        	acs.siteManagerName,
+        	acs.siteManagerNumber,
+        	acs.siteManagerEmail,
+        	acs.siteRegDTTM,
+        	acs.siteRegUser,
+        	acs.siteModUser
+        FROM aton_company_site acs
+        LEFT JOIN aton_company ac
+        ON acs.companyId = ac.companyno
+        ORDER BY acs.siteId DESC
+    </select>
+    <insert id="registerSite">
+ 		INSERT INTO aton_company_site
+	 		(companyId
+	 		, siteName
+	 		, siteType
+	 		, siteStatus
+	 		, siteCalculate
+	 		, siteProtocol
+	 		, siteUrlDetail
+	 		, siteManagerName
+	 		, siteManagerNumber
+	 		, siteManagerEmail
+	 		, siteRegDTTM)
+ 		VALUES 
+	 		(#{companyId}
+	 		, #{siteName}
+	 		, #{siteType}
+	 		, #{siteStatus}
+	 		, #{siteCalculate}
+	 		, #{siteProtocol}
+	 		, #{siteUrlDetail}
+	 		, #{siteManagerName}
+	 		, #{siteManagerNumber}
+	 		, #{siteManagerEmail}
+	 		, DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'))
+    </insert>
+    <insert id="registerSiteForSv">
+ 		INSERT INTO aton_company_site
+	 		(companyId
+	 		, siteName
+	 		, siteType
+	 		, siteGearingUrl
+	 		, siteStatus
+	 		, siteCalculate
+	 		, siteProtocol
+	 		, siteUrlDetail
+	 		, siteManagerName
+	 		, siteManagerNumber
+	 		, siteManagerEmail
+	 		, siteRegDTTM)
+ 		VALUES 
+	 		(#{companyId}
+	 		, #{siteName}
+	 		, #{siteType}
+	 		, #{siteGearingUrl}
+	 		, #{siteStatus}
+	 		, #{siteCalculate}
+	 		, #{siteProtocol}
+	 		, #{siteUrlDetail}
+	 		, #{siteManagerName}
+	 		, #{siteManagerNumber}
+	 		, #{siteManagerEmail}
+	 		, DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'))
+    </insert>
+    <select id="selectBySiteName" resultType="hello.mysql.domain.SiteWithCompanyName">
+    	SELECT 
+    		acs.siteId,
+    		acs.siteName,
+    		ac.companynm,
+    		acs.siteStatus,
+    		acs.siteCalculate,
+    		acs.siteProtocol,
+    		acs.siteUrlDetail,
+    		acs.siteManagerName,
+    		acs.siteManagerNumber,
+    		acs.siteManagerEmail,
+    		acs.siteRegDTTM,
+    		acs.siteRegUser,
+    		acs.siteModUser
+    	FROM aton_company_site acs
+    	LEFT JOIN aton_company ac
+    	ON acs.companyId = ac.companyno
+    	WHERE acs.siteId = #{siteId}
+    </select>
+    <update id="updateSiteInfo">
+    	UPDATE aton_company_site
+    		SET 
+    			siteName = #{siteName},
+    			siteStatus = #{siteStatus},
+    			siteCalculate = #{siteCalculate},
+    			siteProtocol = #{siteProtocol},
+    			siteUrlDetail = #{siteUrlDetail},
+    			siteManagerName = #{siteManagerName},
+    			siteManagerNumber = #{siteManagerNumber},
+    			siteManagerEmail = #{siteManagerEmail}
+ 		WHERE siteId = #{siteId}
+    </update>
+    <delete id="deleteSiteInfo">
+    	DELETE FROM aton_company_site
+    	WHERE siteId = #{siteId}
+    </delete>
+    <select id="searchSite" resultType="hello.mysql.domain.SiteWithCompanyName">
+        SELECT
+        	acs.siteId,
+        	acs.siteName,
+        	ac.companynm,
+        	acs.siteStatus,
+        	acs.siteCalculate,
+        	acs.siteProtocol,
+        	acs.siteUrlDetail,
+        	acs.siteManagerName,
+        	acs.siteManagerNumber,
+        	acs.siteManagerEmail,
+        	acs.siteRegDTTM,
+        	acs.siteRegUser,
+        	acs.siteModUser
+        FROM aton_company_site acs
+        LEFT JOIN aton_company ac
+        ON acs.companyId = ac.companyno
+        WHERE acs.companyId = #{companyId}
+        AND acs.siteName LIKE CONCAT('%', #{siteName}, '%')
+        AND acs.siteStatus = #{siteStatus}
+        AND acs.siteCalculate = #{siteCalculate}
+        <if test="siteProtocol != ''"> 
+        AND acs.siteProtocol = #{siteProtocol}
+        </if>
+        <if test="siteUrlDetail != ''"> 
+        AND acs.siteUrlDetail LIKE CONCAT('%', #{siteUrlDetail}, '%')
+        </if>
+        AND acs.siteRegDTTM <![CDATA[ >= ]]> CONCAT(#{startDate}, "000000")
+        AND acs.siteRegDTTM <![CDATA[ <= ]]> CONCAT(#{endDate}, "235959")
+        ORDER BY acs.siteId DESC
+    </select>
+</mapper>

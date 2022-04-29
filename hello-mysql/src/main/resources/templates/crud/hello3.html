@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<!--  이거 버젼 차이 있음 -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport가 무엇인지 알아보기 -->
+<title>제휴사 통계</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script th:inline="javascript">
+</script>
+​</head>
+<body>
+<table id="resultTable" border="1" cellspacing="0" width="100%">
+	<thead height="40">
+		<tr bgcolor="#D5D5D5" style="font-weight:bold"><td colspan="2" align="center" th:text="${searchYear}+'-'+${searchMonth}+' '+${companynm}+' 통계'"></td></tr>
+	</thead>
+	<tbody id="searchTable" align="center">
+		<tr height="40">
+			<td width="200" id="price" bgcolor="#D5D5D5" style="font-weight:bold">상품금액</td>
+			<td th:text="${#numbers.formatInteger(list1[0].price, 0, 'COMMA')}+'원'"></td>
+		</tr>
+		<tr height="40">
+			<td width="200" bgcolor="#D5D5D5" style="font-weight:bold">할인금액</td>
+			<td th:text="${#numbers.formatInteger(list1[0].discount, 0, 'COMMA')}+'원'"></td>
+		</tr>
+		<tr height="40">
+			<td width="200" bgcolor="#D5D5D5" style="font-weight:bold">결제금액</td>
+			<td th:text="${#numbers.formatInteger(list1[0].payment, 0, 'COMMA')}+'원'"></td>
+		</tr>
+		<tr height="40">
+			<td width="200" bgcolor="#D5D5D5" style="font-weight:bold">제휴사 수수료</td>
+			<td th:text="${#numbers.formatInteger(list1[0].fee, 0, 'COMMA')}+'원'"></td>
+		</tr>
+	</tbody>
+	
+</table>
+<br>
+<br>
+<a style="font-weight:bold">[판매상품]</a>
+<hr/>
+<br>
+<div id="result2">
+<table id="resultTable" border="1" cellspacing="0" width="100%">
+	<thead align="center" height="40">
+		<tr bgcolor="#D5D5D5" style="font-weight:bold">
+			<td>상품번호</td>
+			<td>상품금액</td>
+			<td>할인금액</td>
+			<td>결제금액</td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr th:each="list:${list2}"  height="40">
+			<td th:text="${list.goodsno}">
+			<td th:text="${#numbers.formatInteger(list.price, 0, 'COMMA')}+'원'">
+			<td th:text="${#numbers.formatInteger(list.discount, 0, 'COMMA')}+'원'">
+			<td th:text="${#numbers.formatInteger(list.payment, 0, 'COMMA')}+'원'">
+		</tr>
+	</tbody>
+	<tfoot>
+		<tr height="40" align="center">
+			<td>합계</td>
+			<td th:text="${#numbers.formatInteger(#aggregates.sum(list2.![price]), 0, 'COMMA')}+'원'"></td>
+			<td th:text="${#numbers.formatInteger(#aggregates.sum(list2.![discount]), 0, 'COMMA')}+'원'"></td>
+			<td th:text="${#numbers.formatInteger(#aggregates.sum(list2.![payment]), 0, 'COMMA')}+'원'"></td>
+		</tr>
+	</tfoot>
+</table>
+<br>
+<p align="center"><input type="button" value="닫기" onClick="javascript:window.close()"></p>
+</div>
+</body>
+</html>

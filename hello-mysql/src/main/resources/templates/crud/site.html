@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<!--  이거 버젼 차이 있음 -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport가 무엇인지 알아보기 -->
+<title>일별 통계</title>
+<link rel="stylesheet"
+	href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+<link rel="stylesheet" href="../css/gjy_div.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<!-- datepicker 한국어로 -->
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/i18n/datepicker-ko.js"></script>
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/i18n/datepicker-ko.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="../script/gjy_common.js"></script>
+<style>
+#siteTable {
+    border-top: 1px solid #444444;
+    border-collapse: collapse;
+}
+
+#siteTable thead {
+	background-color: #F0F8FF;
+	font-weight: bold;
+}
+
+a { text-decoration: underline; color: black; }
+    a:visited { text-decoration: none; }
+    a:hover { text-decoration: none; }
+    a:focus { text-decoration: none; }
+    a:hover, a:active { text-decoration: none; }
+</style>
+<script th:inline="javascript">
+
+/*<![CDATA[*/
+var siteList = /*[[${siteList}]]*/;
+var today = /*[[${today}]]*/;
+/*]]>*/
+
+function formateToDate(param){
+	let year = param.substring(0,4);
+	let month = param.substring(4,6);
+	let day = param.substring(6,8);
+	
+	return [year, month, day].join('.'); 
+}
+
+function assignStatusMsg(param){
+	switch (param){
+	case "00":
+		return "정상";
+		break;
+	case "01":
+		return "중지";
+		break;
+	case "02":
+		return "준비중";
+		break;
+	}
+}
+
+function createTable(data, id){
+	
+	let tableRow = '';
+	
+	if(data.length == 0 ){
+		tableRow += `<tr height="40px"><td colspan="7" align="center">조회된 데이터가 없습니다.</td></tr>`
+	} else {
+		for(i=0;i<data.length;i++){
+			data.length-i
+			tableRow += `<tr align="center" height="40px">`;
+			tableRow += `<td>${data.length-i}</td>` //data[i].siteId
+			tableRow += `<td><a href="/site/modify?siteId=${data[i].siteId}">${data[i].siteName}</a></td>`
+			tableRow += `<td>${data[i].companynm}</td>`
+			tableRow += `<td>${assignStatusMsg(data[i].siteStatus)}</td>`
+			tableRow += `<td>${data[i].siteCalculate}</td>`
+			tableRow += `<td>${formateToDate(data[i].siteRegDTTM)}</td>`
+			tableRow += `<td>${data[i].siteRegUser}</td>`
+			tableRow += `</tr>`
+		}
+	}
+	
+	$('#'+id).html(tableRow);
+}
+ 
+$(document).ready(function () {
+	
+	loadCompanyList();
+	
+	console.log(today);
+	
+	$('[name=startDate]').val(today);
+	$('[name=endDate]').val(today);
+	
+	$('[name=endDate]').on('change', function(){
+		$('[name=startDate]').attr('max', $('[name=endDate]').val());
+	})
+	
+	$('[name=startDate]').on('change', function(){
+		$('[name=endDate]').attr('min', $('[name=startDate]').val());
+	})
+	
+	/* $(function() {
+        $("#startDate,#endDate").datepicker({});                           
+    }); */
+    
+    $('[name=endDate]').attr('min', $('[name=startDate]').val());
+    $('[name=startDate]').attr('max', $('[name=endDate]').val());
+	
+	$('#searchBtn').on('click', function(){
+		
+		if( !$('[name=siteName]').val().replaceAll(' ', '') ){
+			$('#valid_siteName').text('필수 항목을 입력하세요.');
+			$('[name=siteName]').focus();
+			showConfirmModal('necessary_info','필수 항목을 입력하세요.');
+		} else if ( !regUrl.test($('[name=siteUrl]').val()) && $('[name=siteUrl]').val() != null && $('[name=siteUrl]').val() != "") {
+			$('[name=siteUrl]').focus();
+			showConfirmModal('necessary_info','잘못된 URL 형식입니다.');
+		} else {
+			$('[name=startDate]').val($('[name=startDate]').val().replaceAll('-',''));
+			$('[name=endDate]').val($('[name=endDate]').val().replaceAll('-',''));
+			
+			let params = $("#searchForm").serialize();
+			
+			console.log(params);
+			
+			$.ajax({
+				method: "get",
+				url: "/site/search",
+				contextType: "application/json",
+				dataType: "json",
+				data: params,
+				success: function(data){
+					//siteTableBody
+					createTable(data, "siteTableBody");
+					console.log(data);
+				},
+				complete: function(){
+					console.log("완료");
+				}
+			})
+		}
+	})
+	
+	createTable(siteList, "siteTableBody");
+			
+});
+</script>
+</head>
+<body>
+<div class="pageTop">
+<h3>제휴사 사이트 관리</h3>
+</div>
+<div class="mainDiv">
+<div class="searchDiv">
+<form id="searchForm" method="get" action="/site/search">
+<table id="inputTable" cellspacing="0" width="100%">
+	<tbody id="searchTableBody">
+		<tr height="40px">
+			<td width="25%" align="right">제휴사&nbsp&nbsp</td>
+			<td>
+				<select id="companyId" name="companyId" style="width: 300px">
+				</select>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right" style="color: red">*
+				<span style="color: black">사이트명&nbsp&nbsp</span>
+			</td>
+			<td>
+				<input name="siteName" placeholder="30자 이하" maxlength="30" style="width: 300px"/>
+				<span id="valid_siteName" th:style="${'color: red; font-size:11px;'}"></span>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right">사이트 상태&nbsp&nbsp</td>
+			<td>
+				<select id="siteStatus" name="siteStatus" style="width: 300px">
+					<option value="00">정상</option>
+					<option value="01">중지</option>
+					<option value="02">준비중</option>
+				</select>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right">정산 여부&nbsp&nbsp</td>
+			<td>
+				<input type="radio" id="siteCalculate" name="siteCalculate" value="Y" checked="checked">Y
+				<input type="radio" id="siteCalculate" name="siteCalculate" value="N">N
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right">사이트 URL&nbsp&nbsp</td>
+			<td>
+				<input name="siteUrl" placeholder="http:// 또는 https://를 입력하세요" style="width: 300px"/>
+			</td>
+		</tr>
+		<tr height="40px">
+			<td width="25%" align="right">등록일자&nbsp&nbsp</td>
+			<td>
+				<input type="date" name="startDate" id="startDate">
+				<span>~</span>
+				<input type="date" name="endDate" id="endDate">
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div class="btnDiv">
+<span>
+<button type="button" id="registerBtn" class="type1Btn" style="float: right;" onclick="location.href='register'">등록</button>
+</span>
+<span>
+<button type="button" id="searchBtn" class="type2Btn" style="float: right;">조회</button>
+</span>
+</div>
+</form>
+</div>
+<div class="tableDiv">
+<p>사이트 목록
+</p>
+<table id="siteTable" cellspacing="0" width="100%">
+	<thead>
+		<tr align="center">
+			<td>No</td>
+			<td>사이트명</td>
+			<td>제휴사명</td>
+			<td>상태</td>
+			<td>정산여부</td>
+			<td>등록일자</td>
+			<td>등록자</td>
+		</tr>
+	</thead>
+	<tbody id="siteTableBody">
+	</tbody>
+</table>
+</div>
+</div>
+<!-- 조회 유효성 검사 후 메시지 -->
+<div class="modal_wrapper" id="necessary_info">
+	<div class="modal_confirm_content">
+		<div class="modal_msg">
+		</div>
+		<div class="modal_btn">
+			<button type="button" class="type1Btn" onclick="$('.modal_wrapper').hide();">확인</button>
+		</div>
+	</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="../script/gjy_common.js"></script>
+<link rel="stylesheet" href="../css/gjy_common.css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+<title>제휴사별 월별 통계</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script th:inline="javascript">
+
+/*<![CDATA[*/
+var today = /*[[${today}]]*/;
+/*]]>*/
+
+// 현재 날짜 변수로 받기
+var currentDate = new Date();
+var currentYear = parseInt(today.substring(0,4));
+var currentMonth = parseInt(today.substring(5,7));
+
+/** 선택상자에서 월을 새롭게 선택했을 때 실행될 함수
+ * 스크립트 가장 바깥에 위치해야 함
+ */
+function changeMonthList(){
+		if ($('#searchYear').val()==currentYear){
+			
+			let newMonthRow = '';
+			
+			$('#searchMonth').empty();
+			
+			for(i=1;i<currentMonth+1;i++){
+				newMonthRow += `<option value="${i}">${i}</option>`
+			}
+			
+			$('#searchMonth').append(newMonthRow);
+			
+		} else{
+			
+			let newMonthRow = '';
+			
+			$('#searchMonth').empty();
+			
+			for(i=1;i<12+1;i++){
+				newMonthRow += `<option value="${i}">${i}</option>`
+			}
+			
+			$('#searchMonth').append(newMonthRow);
+		}
+}
+
+function showPopUp(param){ 
+    var url = `/search/month/each?searchYear=`+$('#searchYear').val()+`&searchMonth=`+$('#searchMonth').val()+`&companynm=`+param;
+    var name = "popup test";
+    var option = "width = 500, height = 500, top = 100, left = 200, location = no"
+    window.open(url, name, option);
+}
+
+function showModal(param){
+	/** 쿼리의 조건 변수
+	 */	
+	let searchYear = $("#searchYear").val();
+	let searchMonth = $("#searchMonth").val();
+	let companynm = param;
+	
+	// 조회 결과를 ajax로 불러와서 테이블로 만듦
+	$.ajax({
+		method: "get",
+		url:"/search/month/result2",
+		contextType: "application/json",
+		dataType: "json",
+		data: {
+			"searchYear": searchYear,
+			"searchMonth": searchMonth,
+			"companynm": companynm
+		},
+		success: function(data){
+			
+			let modalTableRow = ''; //modal 창의 첫번째 테이블에 추가
+			let month = data.param.searchMonth;
+			let modal_price_sum = 0;
+			let modal_discount_sum = 0;
+			let modal_payment_sum = 0;
+			
+			if(month<10){
+				month = '0'+month;
+			}
+			
+			modalTableRow += `<thead>`
+			modalTableRow += `	<tr bgcolor="#D5D5D5" style="font-weight:bold"><td colspan="2" align="center">${data.param.searchYear}-${month} ${data.param.companynm} 통계</td></tr>`
+			modalTableRow += `</thead>`
+			modalTableRow += `<tbody>`
+			modalTableRow += `	<tr align="center">`
+			modalTableRow += `		<td>상품금액</td>`
+			modalTableRow += `		<td>${numWithCommas(data.list[0].price)}원</td>`
+			modalTableRow += `	</tr>`
+			modalTableRow += `	<tr align="center">`
+			modalTableRow += `		<td>할인금액</td>`
+			modalTableRow += `		<td>${numWithCommas(data.list[0].discount)}원</td>`
+			modalTableRow += `	</tr>`
+			modalTableRow += `	<tr align="center">`
+			modalTableRow += `		<td>결제금액</td>`
+			modalTableRow += `		<td>${numWithCommas(data.list[0].payment)}원</td>`
+			modalTableRow += `	</tr>`
+			modalTableRow += `	<tr align="center">`
+			modalTableRow += `		<td>제휴사 수수료</td>`
+			modalTableRow += `		<td>${numWithCommas(data.list[0].fee)}원</td>`
+			modalTableRow += `	</tr>`
+			modalTableRow += `</tbody>`
+			
+			$('#modalTable').html(modalTableRow);
+			
+			let modalTable2Row = ''; // modal 창의 두번째 테이블
+			modalTable2Row += `<thead align="center"><tr bgcolor="#D5D5D5" style="font-weight:bold"><td>상품번호</td><td>상품금액</td><td>할인금액</td><td>결제금액</td></tr></thead>`
+			modalTable2Row += `<tbody>`
+			
+			for(i=0;i<data.listByProduct.length;i++){
+				modalTable2Row += `<tr align="center">`
+				modalTable2Row += `	<td>${data.listByProduct[i].goodsno}</td>`
+				modalTable2Row += `	<td>${numWithCommas(data.listByProduct[i].price)}원</td>`
+				modalTable2Row += `	<td>${numWithCommas(data.listByProduct[i].discount)}원</td>`
+				modalTable2Row += `	<td>${numWithCommas(data.listByProduct[i].payment)}원</td>`
+				modalTable2Row += `</tr>`
+				
+				modal_price_sum += data.listByProduct[i].price;
+				modal_discount_sum += data.listByProduct[i].discount;
+				modal_payment_sum += data.listByProduct[i].payment;
+			}
+			
+			modalTable2Row += `<tr align="center">`
+			modalTable2Row += ` <td>합계</td>`
+			modalTable2Row += ` <td>${numWithCommas(modal_price_sum)}원</td>`
+			modalTable2Row += ` <td>${numWithCommas(modal_discount_sum)}원</td>`
+			modalTable2Row += ` <td>${numWithCommas(modal_payment_sum)}원</td>`
+			modalTable2Row += `</tr>`
+			
+			$('#resultTableByGoods').html(modalTable2Row);
+			
+			$('.modal').show();
+		},
+		complete: function(){
+			console.log("modal complete");
+		}
+	})
+}
+
+$(document).ready(function () {
+	
+	createLoadingBar();
+	
+	$("#closeModal").click(function(){
+		$(".modal").hide();
+	})
+		
+	let yearRow = ''; //연도 선택박스 목록
+
+	for (i=2015;i<currentYear+1;i++){
+		yearRow += `<option value="${i}">${i}</option>`
+	}
+	
+	let monthRow = ''; // 월 선택박스 목록
+
+	$('#searchYear').append(yearRow);
+	
+	/** 올해 연도면 지금 월까지만 추가
+	* 다른 연도면 12월까지 모두 추가
+	*/
+	if ($('#searchYear').val()==currentYear){
+		for(i=1;i<currentMonth+1;i++){
+			monthRow += `<option value="${i}">${i}</option>`
+		}
+		
+	} else{
+		for (i=1;i<13;i++){
+			monthRow += `<option value="${i}">${i}</option>`
+		}
+	}
+	
+	$('#searchMonth').append(monthRow);
+	
+	/** 현재 년, 월을 기본값으로
+	*/
+	$('select[id="searchYear"]').find('option[value="'+currentYear+'"]').attr("selected",true);
+	$("#searchMonth").find('option[value="'+currentMonth+'"]').attr("selected",true);
+	
+	$('#searchBtn').click(function(){
+		
+		let searchYear = $('#searchYear').val();
+		let searchMonth = $('#searchMonth').val();
+
+		console.log($('#searchYear').val());
+	
+		$.ajax({
+			method: "get",
+			url:"/search/month/result",
+			contextType: "application/json",
+			dataTye: "text",
+			data: {
+				"searchYear": searchYear,
+				"searchMonth": searchMonth
+			},
+		
+			beforeSend: function(){
+				$('#back, #loadingBar').css("display", "block");
+			},
+		
+			success: function(data) {
+			
+				console.log(data);
+			
+				let tableRow = '';
+				let price_sum = 0;
+				let discount_sum = 0;
+				let total_sum = 0;
+			
+				tableRow += `<table border="1" cellspacing="0" width="100%" id="resultTable">`;
+				tableRow += `	<thead align="center">`
+				tableRow += `		<tr height="40" bgcolor="#D5D5D5" style="font-weight:bold">`
+				tableRow += `			<td>제휴사명</td><td>상품금액</td><td>할인금액</td><td>결제금액</td>`
+				tableRow += `		</tr>`
+				tableRow += `	</thead>`
+				tableRow += `<tbody align="center">`
+				
+				/** 검색된 데이터가 없으면 데이터가 없다고 띄우고 아니면 검색된 데이터 테이블에 추가
+				*/
+				if(data.length==0){
+					tableRow += `<tr data-index="0" height="40"><td colspan="4">통계데이터가 없습니다.</td></tr>`
+					
+				} else {
+					for(i=0;i<data.length;i++){
+						tableRow += `<tr data-index="${i}" height="40">`
+						tableRow += `	<td class="companyRow" onclick="showModal('${data[i].companynm}')">${data[i].companynm}</a></td>`
+						tableRow += `	<td> ${numWithCommas(data[i].price)}원</td>`
+						tableRow += `	<td> ${numWithCommas(data[i].discount)}원</td>`
+						tableRow += `	<td> ${numWithCommas(data[i].price-data[i].discount)}원</td>`
+						tableRow += `</tr>`
+					
+						price_sum += data[i].price
+						discount_sum += data[i].discount
+					}
+				
+					total_sum += price_sum - discount_sum;
+				
+					tableRow += `<tfoot align="center"><tr height="40"><td>합계</td><td>${numWithCommas(price_sum)}원</td><td>${numWithCommas(discount_sum)}원</td><td>${numWithCommas(total_sum)}원</td></tr>`
+					
+				}
+						
+				$('#resultTable').html(tableRow);
+			},
+			
+			complete: function() {
+				console.log("complete");
+				$('#back, #loadingBar').css("display", "none");
+			}
+		});
+	});
+})
+</script>
+</head>
+<body>
+<table id="searchTable" border="1" cellspacing="0" width="100%">
+	<tbody id="searchTable">
+		<tr height="50">
+			<td align="center" bgcolor="#D5D5D5" width="100" style="font-weight:bold">기간</td>
+			<td name="searchOption1" id="searchOption1">
+				&nbsp
+				<select name="searchYear" id="searchYear" onchange="changeMonthList()" style="width:80px; text-align:center;">
+				</select>
+				<span style="font-weight:bold">년</span>&nbsp;&nbsp;
+				<select name="searchMonth" id="searchMonth" style="width:60px; text-align:center;">
+				</select>
+				<span style="font-weight:bold">월</span>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<p align="center"><button id="searchBtn">조회</button></p>
+<br>
+<div id="resultTable">
+</div>
+<!-- 모달 파트 -->
+<div class="modal">
+	<div class="modal_content">
+		<div class="table1">
+			<table id="modalTable" border="1" cellspacing="0" width="90%" style="margin: auto; margin-top:20px">
+			</table>
+		</div>
+		<div class="subtitle">
+			<a style="font-weight:bold">[판매상품]</a>
+			<hr/>
+		</div>
+		<div class="table2">
+			<table id="resultTableByGoods" border="1" cellspacing="0" width="90%" style="margin:auto; width: 90%;">
+			</table>
+		</div>
+		<div class="closBtn">
+			<p align="center"><button id="closeModal">닫기</button></p>
+		</div>
+	</div>
+</div>
+</body>
+</html>
